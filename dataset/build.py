@@ -89,7 +89,9 @@ class DatasetBuilder:
         return out
             
     def _build(self, path_list):
-        data = []
+        imgs = []
+        points = []
+        labels = []
         for path in tqdm.tqdm(path_list):
             try:
                 # load meta data
@@ -144,32 +146,31 @@ class DatasetBuilder:
                 ax, ay, az = euler_from_matrix(R_gt)
                 cls_label = self._classFromRotation(ax, ay, az)
                 
-                data.append({"img": img_out, "points": point_cloud, "class": cls_label})
+                imgs.append(img_out)
+                points.append(point_cloud)
+                labels.append(cls_label)
             except Exception as e:
                 print("[Warning] catch an error: ", e)
+        data = {"img": np.array(imgs), "points": np.array(points), "class": np.array(labels)}
         return data
             
-    def buildTrain(self):
+    def buildTrain(self, save_dir="./Data/"):
         data = self._build(self.train_list)
-        field_names= ['img', 'points', 'class']
-        with open('Train.csv', 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=field_names)
-            writer.writeheader()
-            writer.writerows(data)
+        np.save(os.path.join(save_dir, "Train.npy"), data)
             
-    def buildTest(self):
+    def buildTest(self, save_dir="./Data/"):
         data = self._build(self.test_list)
-        field_names= ['img', 'points', 'class']
-        with open('Test.csv', 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=field_names)
-            writer.writeheader()
-            writer.writerows(data)
+        np.save(os.path.join(save_dir, "Test.npy"), data)
             
             
 if __name__ == "__main__":
     builder = DatasetBuilder()
-    # builder.buildTrain()
+    builder.buildTrain()
     builder.buildTest()
+    
+    data = np.load("./Data/Train.npy", allow_pickle=True)
+    for key in data.item():
+        print(key, data.item()[key].shape)
             
             
             
