@@ -167,10 +167,6 @@ if __name__ == "__main__":
     builder = DatasetBuilder()
     builder.buildTrain()
     builder.buildTest()
-    
-    data = np.load("./Data/Train.npy", allow_pickle=True)
-    for key in data.item():
-        print(key, data.item()[key].shape)
             
             
             
