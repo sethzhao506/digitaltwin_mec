@@ -57,7 +57,7 @@ class DataMEC:
     
     def MEC_Progression(self, plot=False):
         idx_list = list(range(len(self.data["class"])))
-        percentage_list = list(range(0, 100, 1))
+        percentage_list = list(range(0, 100, 2))
         mecs = []
         for percentage in percentage_list:
             percentage /= 100.0
@@ -86,10 +86,11 @@ class DataMEC:
             mec = minthreshs * (d + 1) + (minthreshs + 1) * num_classes # mec for multi-classes
             mecs.append(mec)
         if plot:
-            plt.plot(percentage_list, mecs)
+            plt.plot(percentage_list, mecs, label="Ideal Machine Learner")
             plt.xlabel('% Training Data')
             plt.ylabel('MEC / bits')
             plt.title('Capacity Progression for Training Data')
+            plt.legend()
             plt.show()
             
   
