@@ -29,7 +29,7 @@ class MLP(torch.nn.Module):
         for in_size, out_size in zip(in_sizes, out_sizes):
             layers.append(nn.Linear(in_size, out_size))
             # layers.append(nn.LayerNorm(out_size)) NOTE: empirically this does not work well, on small training set
-            layers.append(nn.BatchNorm1d(out_size))
+            # layers.append(nn.BatchNorm1d(out_size))
             layers.append(activation)
 
         if activation != output_activation:
