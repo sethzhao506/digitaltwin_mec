@@ -36,45 +36,39 @@ def main():
     else:
         pass
 
-    training_dataset = DTTDMECDataset(cfg = a, mode = "Train")
+    device = torch.device('cuda:{:d}'.format(0))
 
+    training_dataset = DTTDMECDataset(cfg = a, mode = "Train")
+    testing_dataset = DTTDMECDataset(cfg = a, mode = "Test")
     training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=h.batchsize, shuffle=True, num_workers=h.num_workers)
+    testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=1, shuffle=False, num_workers=1)
     
     mlp = MLP(
         in_sizes=h.input_sizes,
         out_sizes=h.output_sizes,
         activation=h.activation,
-    )
+    ).to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(mlp.parameters(), lr=1e-4)
-    
+    mlp.train()
     for epoch in range(0, a.training_epoch):
         print(f'Starting epoch {epoch}')
         current_loss = 0.0
         for i, data in tqdm(enumerate(training_dataloader)):
             imgs, points, labels = data[IMAGE_KEY], data[POINT_KEY], data[LABEL_KEY]
+            imgs = torch.autograd.Variable(imgs.to(device, non_blocking=True)) # [batchsize, 47, 47, 3]
+            points = torch.autograd.Variable(points.to(device, non_blocking=True)) # [batchsize, 300, 3]
+            labels = torch.autograd.Variable(labels.to(device, non_blocking=True)).squeeze(1)
             optimizer.zero_grad()
-            flattened_imgs = torch.flatten(imgs, 1)
-            flattened_points = torch.flatten(points, 1)
-            inputs = torch.cat((flattened_imgs, flattened_points), dim=1)
+            flattened_imgs = torch.flatten(imgs, 1) # [batchsize, 6627]
+            flattened_points = torch.flatten(points, 1) # [batchsize, 900]
+            inputs = torch.cat((flattened_imgs, flattened_points), dim=1) # [batchsize, 7527]
             outputs = mlp(inputs)
-            
-            # Compute loss
             loss = criterion(outputs, labels)
-            
-            # Perform backward pass
             loss.backward()
-            
-            # Perform optimization
             optimizer.step()
-            
-            # Print statistics
             current_loss += loss.item()
-            if i % 500 == 499:
-                print('Loss after mini-batch %5d: %.3f' %
-                        (i + 1, current_loss / 500))
-                current_loss = 0.0
 
     # Process is complete.
     print('Training process has finished.')

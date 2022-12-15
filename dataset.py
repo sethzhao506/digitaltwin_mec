@@ -17,7 +17,7 @@ class DTTDMECDataset(torch.utils.data.Dataset):
         data = np.load(os.path.join(self.dataset_path, self.mode + ".npy"), allow_pickle = True)
         img = data.item()["img"]
         points = data.item()["points"]
-        label = data.item()["class"]
+        label = np.expand_dims(data.item()["class"], axis=1)
         return img, points, label
     
     def __getitem__(self, ind):
@@ -28,7 +28,7 @@ class DTTDMECDataset(torch.utils.data.Dataset):
         result = {
             IMAGE_KEY: torch.FloatTensor(img),
             POINT_KEY: torch.FloatTensor(pc),
-            LABEL_KEY: torch.FloatTensor(label)
+            LABEL_KEY: torch.tensor(label)
         }
         return result
 
