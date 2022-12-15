@@ -6,21 +6,24 @@ import json
 #import torchaudio
 import torch
 import torch.nn as nn
+import numpy as np
 import torch.nn.functional as F
 from model import MLP
 from dataset import DTTDMECDataset
 from utils import *
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 def main():
     print('Initializing Training Process..')
-
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', default=2022)
-    parser.add_argument('--training_epoch', default=20)
-    parser.add_argument('--dataset_path', default='dataset')
-    parser.add_argument('--config', default='config.json')
+    parser.add_argument('--seed', default=2022, type=int)
+    parser.add_argument('--training_epoch', default=100, type=int)
+    parser.add_argument('--dataset_path', default='dataset', type=str)
+    parser.add_argument('--config', default='config.json', type=str)
+    parser.add_argument('--checkpoint_path', default='ckpt', type=str)
+    parser.add_argument('--summary_interval', default=50, type=int)
 
     a = parser.parse_args()
 
@@ -28,6 +31,7 @@ def main():
         data = f.read()
     json_config = json.loads(data)
     h = AttrDict(json_config)
+    build_env(a.config, 'config.json', a.checkpoint_path)
 
     torch.manual_seed(a.seed)
     if torch.cuda.is_available():
@@ -42,19 +46,21 @@ def main():
     testing_dataset = DTTDMECDataset(cfg = a, mode = "Test")
     training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=h.batchsize, shuffle=True, num_workers=h.num_workers)
     testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=1, shuffle=False, num_workers=1)
+
+    sw = SummaryWriter(os.path.join(a.checkpoint_path, 'logs'))
     
     mlp = MLP(
         in_sizes=h.input_sizes,
         out_sizes=h.output_sizes,
         activation=h.activation,
     ).to(device)
-
+    
+    steps = 0
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(mlp.parameters(), lr=1e-4)
     mlp.train()
     for epoch in range(0, a.training_epoch):
         print(f'Starting epoch {epoch}')
-        current_loss = 0.0
         for i, data in tqdm(enumerate(training_dataloader)):
             imgs, points, labels = data[IMAGE_KEY], data[POINT_KEY], data[LABEL_KEY]
             imgs = torch.autograd.Variable(imgs.to(device, non_blocking=True)) # [batchsize, 47, 47, 3]
@@ -67,8 +73,37 @@ def main():
             outputs = mlp(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
+
+            if steps % a.summary_interval == 0:
+                pred = torch.argmax(outputs, dim=1)
+                acc = accuracy(pred, labels)
+                sw.add_scalar("training/loss", loss.item(), steps)
+                sw.add_scalar("training/acc", acc, steps)
+
+                # validation
+                mlp.eval()
+                torch.cuda.empty_cache()
+                val_loss = 0
+                with torch.no_grad():
+                    val_acc = []
+                    for j, batch in enumerate(testing_dataloader):
+                        imgs, points, labels = batch[IMAGE_KEY].to(device, non_blocking=True), batch[POINT_KEY].to(device, non_blocking=True), batch[LABEL_KEY].to(device, non_blocking=True).squeeze(1)
+                        flattened_imgs = torch.flatten(imgs, 1) # [batchsize, 6627]
+                        flattened_points = torch.flatten(points, 1) # [batchsize, 900]
+                        inputs = torch.cat((flattened_imgs, flattened_points), dim=1) # [batchsize, 7527]
+                        outputs = mlp(inputs)
+                        loss = criterion(outputs, labels)
+                        pred = torch.argmax(outputs, dim=1)
+                        val_acc.append(accuracy(pred, labels))
+                        val_loss += loss.item()
+
+                    val_loss = val_loss / (j+1)
+                    sw.add_scalar("validation/loss", val_loss, steps)
+                    sw.add_scalar("validation/acc", np.mean(val_acc), steps)
+                    
+                mlp.train()
             optimizer.step()
-            current_loss += loss.item()
+            steps += 1
 
     # Process is complete.
     print('Training process has finished.')
