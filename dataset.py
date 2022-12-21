@@ -9,6 +9,7 @@ class DTTDMECDataset(torch.utils.data.Dataset):
     def __init__(self, cfg, mode='Train'):
         super().__init__()
         self.dataset_path = cfg.dataset_path
+        self.add_gaussian = cfg.add_gaussian
         self.mode = mode
         # load in all precomputed features
         self.img_features, self.points_features, self.labels = self._load_precomputed_features()
@@ -21,6 +22,13 @@ class DTTDMECDataset(torch.utils.data.Dataset):
             label = np.expand_dims(data.item()["class"], axis=1)
         elif self.mode == 'All':
             train_data = np.load(os.path.join(self.dataset_path, "Train.npy"), allow_pickle = True)
+            if self.add_gaussian:
+                batch, row, col, ch = train_data.item()["img"].shape
+                mean = 0.0
+                sigma = 1.0
+                gauss = np.random.normal(mean, sigma,(batch, row, col, ch))
+                gauss = gauss.reshape(batch, row, col, ch)
+                train_data.item()["img"] = train_data.item()["img"] + gauss
             test_data = np.load(os.path.join(self.dataset_path, "Test.npy"), allow_pickle = True)
             img = np.concatenate([train_data.item()["img"], test_data.item()["img"]], axis=0)
             points = np.concatenate([train_data.item()["points"], test_data.item()["points"]], axis=0)

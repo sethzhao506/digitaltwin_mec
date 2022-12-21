@@ -19,7 +19,8 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--seed', default=2022, type=int)
-    parser.add_argument('--training_epoch', default=100, type=int)
+    parser.add_argument('--training_epoch', default=200, type=int)
+    parser.add_argument('--add_gaussian', default=True, type=bool)
     parser.add_argument('--dataset_path', default='dataset', type=str)
     parser.add_argument('--config', default='config.json', type=str)
     parser.add_argument('--checkpoint_path', default='ckpt', type=str)
@@ -40,8 +41,8 @@ def main():
     else:
         pass
 
-    # device = torch.device('cuda:{:d}'.format(0))
-    device = torch.device('cpu')
+    device = torch.device('cuda:{:d}'.format(0))
+    #device = torch.device('cpu')
 
     # training_dataset = DTTDMECDataset(cfg = a, mode = "Train")
     # testing_dataset = DTTDMECDataset(cfg = a, mode = "Test")

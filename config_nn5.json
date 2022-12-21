@@ -1,0 +1,8 @@
+{
+    "batchsize": 32, 
+    "num_workers": 4,
+    "input_sizes": [7527, 512, 128], 
+    "output_sizes": [512, 128, 8],
+    "activation": "relu",
+    "learning_rate": 1e-6
+}

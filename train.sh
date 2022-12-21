@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=6 python train.py
+CUDA_VISIBLE_DEVICES=6 python train.py --config config_nn1.json --checkpoint_path ckpt_nn1
