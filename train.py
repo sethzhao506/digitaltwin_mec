@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--seed', default=2022, type=int)
-    parser.add_argument('--training_epoch', default=200, type=int)
+    parser.add_argument('--training_epoch', default=201, type=int)
     parser.add_argument('--add_gaussian', default=True, type=bool)
     parser.add_argument('--dataset_path', default='dataset', type=str)
     parser.add_argument('--config', default='config.json', type=str)
