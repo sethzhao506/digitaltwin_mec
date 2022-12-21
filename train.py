@@ -9,7 +9,7 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from model import MLP
-from dataset import DTTDMECDataset
+from dataset import DTTDMECDataset, split_dataset
 from utils import *
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
@@ -40,10 +40,12 @@ def main():
     else:
         pass
 
-    device = torch.device('cuda:{:d}'.format(0))
+    # device = torch.device('cuda:{:d}'.format(0))
+    device = torch.device('cpu')
 
-    training_dataset = DTTDMECDataset(cfg = a, mode = "Train")
-    testing_dataset = DTTDMECDataset(cfg = a, mode = "Test")
+    # training_dataset = DTTDMECDataset(cfg = a, mode = "Train")
+    # testing_dataset = DTTDMECDataset(cfg = a, mode = "Test")
+    training_dataset, testing_dataset = split_dataset(DTTDMECDataset(cfg = a, mode = "All"), 0.96)
     training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=h.batchsize, shuffle=True, num_workers=h.num_workers)
     testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=1, shuffle=False, num_workers=1)
 
@@ -57,8 +59,11 @@ def main():
     
     steps = 0
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(mlp.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(mlp.parameters(), lr=h.learning_rate)
     mlp.train()
+    
+    loss_list = []
+    acc_list = []
     for epoch in range(0, a.training_epoch):
         print(f'Starting epoch {epoch}')
         for i, data in tqdm(enumerate(training_dataloader)):
@@ -73,13 +78,20 @@ def main():
             outputs = mlp(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
+            
+            # record
+            pred = torch.argmax(outputs, dim=1)
+            acc = accuracy(pred, labels)
+            loss_list.append(loss.item())
+            acc_list.append(acc)
+            
+            if steps % (a.summary_interval//2) == 0:
+                sw.add_scalar("training/loss", sum(loss_list)/max(len(loss_list), 1), steps)
+                sw.add_scalar("training/acc", sum(acc_list)/max(len(acc_list), 1), steps)
+                loss_list = []
+                acc_list = []
 
             if steps % a.summary_interval == 0:
-                pred = torch.argmax(outputs, dim=1)
-                acc = accuracy(pred, labels)
-                sw.add_scalar("training/loss", loss.item(), steps)
-                sw.add_scalar("training/acc", acc, steps)
-
                 # validation
                 mlp.eval()
                 torch.cuda.empty_cache()
