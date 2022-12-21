@@ -24,6 +24,7 @@ def main():
     parser.add_argument('--dataset_path', default='dataset', type=str)
     parser.add_argument('--config', default='config.json', type=str)
     parser.add_argument('--checkpoint_path', default='ckpt', type=str)
+    parser.add_argument('--checkpoint_interval', default=10000, type=int)
     parser.add_argument('--summary_interval', default=50, type=int)
 
     a = parser.parse_args()
@@ -91,6 +92,10 @@ def main():
                 sw.add_scalar("training/acc", sum(acc_list)/max(len(acc_list), 1), steps)
                 loss_list = []
                 acc_list = []
+            
+            if steps % a.checkpoint_interval == 0:
+                checkpoint_path = "{}/mlp_{:08d}".format(a.checkpoint_path, steps)
+                save_checkpoint(checkpoint_path, mlp.state_dict())
 
             if steps % a.summary_interval == 0:
                 # validation
