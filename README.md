@@ -1,2 +1,2 @@
 # CS 294-082 Digital Twin
-Fall 2022 CS 294-082 Final Project.
+Fall 2022 CS 294-082 Final Project, EXPERIMENTAL DESIGN ANALYSIS OF A MACHINE LEARNER FOR OBJECT POSE ESTIMATION, by Chuanyu Pan, Zhihao Zhao, and Zixian Zang.
